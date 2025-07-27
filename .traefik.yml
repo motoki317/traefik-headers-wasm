@@ -1,0 +1,17 @@
+displayName: Headers Manipulation
+runtime: wasm
+type: middleware
+
+summary: 'Advanced headers manipulation in WASM'
+
+testData:
+  manipulations:
+    - matchPath: "^/test/(?<first>[^/]+)/(?<second>[^/]+)$"
+      customRequestHeaders:
+        - name: X-Request-Test
+          value: "first={{ .first }},second={{ .second }},values={{ . }}"
+          replace: true
+      customResponseHeaders:
+        - name: X-Response-Test
+          value: "values={{ . }}"
+          replace: true

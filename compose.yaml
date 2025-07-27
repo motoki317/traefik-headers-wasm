@@ -1,0 +1,38 @@
+volumes:
+  plugin-src:
+
+services:
+  traefik:
+    build: .
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entryPoints.web.transport.lifeCycle.graceTimeOut=0"
+      - "--log.level=DEBUG"
+      - "--experimental.localPlugins.headers.modulename=github.com/motoki317/traefik-headers-wasm"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+
+  whoami:
+    image: traefik/whoami
+    command:
+      - -verbose
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.routers.whoami.middlewares=headers"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].matchPath=^/test/(?<first>[^/]+)/(?<second>[^/]+)$"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customRequestHeaders[0].name=X-Request-Test"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customRequestHeaders[0].value=first={{ .first }},second={{ .second }},values={{ . }}"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customResponseHeaders[0].name=X-Response-Test"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customResponseHeaders[0].value=values={{ . }}"

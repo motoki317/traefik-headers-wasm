@@ -1,0 +1,51 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install tinygo
+        uses: acifani/setup-tinygo@v2
+        with:
+          tinygo-version: '0.33.0'
+
+      - name: Check and get dependencies
+        run: |
+          go mod download
+          go mod tidy
+          git diff --exit-code go.mod
+          git diff --exit-code go.sum
+
+      - name: Build
+        run: make test build
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # https://golangci-lint.run/usage/install#other-ci
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8

@@ -1,0 +1,39 @@
+version: 2
+
+project_name: traefik-headers-wasm
+
+builds:
+  - binary: plugin.wasm
+    tool: tinygo
+    no_unique_dist_dir: true
+    main: .
+    flags:
+      - -scheduler=none
+      - --no-debug
+      - -target=wasi
+    ldflags:
+      - ''
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^doc:'
+      - '^chore:'
+      - '^chore(deps):'
+      - '^test:'
+      - '^tests:'
+
+archives:
+  - id: traefik-headers-wasm
+    name_template: '{{ .ProjectName }}_v{{ .Version }}'
+    formats:
+      - zip
+    files:
+      - LICENSE
+      - .traefik.yml
