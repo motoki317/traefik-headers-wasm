@@ -6,12 +6,12 @@ summary: 'Advanced headers manipulation in WASM'
 
 testData:
   manipulations:
-    - matchPath: "^/test/(?<first>[^/]+)/(?<second>[^/]+)$"
+    - matchPath: "^/test/([^/]+)/([^/]+)$"
       customRequestHeaders:
         - name: X-Request-Test
-          value: "first={{ .first }},second={{ .second }},values={{ . }}"
+          value: "first=$1,second=$2,values="
           replace: true
       customResponseHeaders:
         - name: X-Response-Test
-          value: "values={{ . }}"
+          value: "second=$2"
           replace: true

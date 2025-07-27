@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"text/template"
 
 	"github.com/http-wasm/http-wasm-guest-tinygo/handler"
 	"github.com/http-wasm/http-wasm-guest-tinygo/handler/api"
@@ -71,9 +70,19 @@ func (m *manipulationConfig) getMatcher() (matcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	return func(req api.Request) (bool, map[string]string) {
-		return matchSubexp(re, req.GetURI())
-	}, nil
+	return &fromPathMatcher{re: re}, nil
+}
+
+type fromPathMatcher struct {
+	re *regexp.Regexp
+}
+
+func (f *fromPathMatcher) match(req api.Request) bool {
+	return f.re.MatchString(req.GetURI())
+}
+
+func (f *fromPathMatcher) replace(req api.Request, tmpl string) string {
+	return f.re.ReplaceAllString(req.GetURI(), tmpl)
 }
 
 type customHeader struct {
@@ -86,19 +95,18 @@ func (h *customHeader) compile() (*headerManipulation, error) {
 	if h.Name == "" {
 		return nil, fmt.Errorf("header name is required")
 	}
-	tmpl, err := template.New("header").Parse(h.Value)
-	if err != nil {
-		return nil, err
-	}
 	return &headerManipulation{
 		name:    h.Name,
-		tmpl:    tmpl,
+		tmpl:    h.Value,
 		replace: h.Replace,
 	}, nil
 }
 
 // matcher matches request and replaces strings.
-type matcher = func(req api.Request) (bool, map[string]string)
+type matcher interface {
+	match(req api.Request) bool
+	replace(req api.Request, tmpl string) string
+}
 
 type manipulation struct {
 	matcher matcher
@@ -109,7 +117,7 @@ type manipulation struct {
 
 type headerManipulation struct {
 	name    string
-	tmpl    *template.Template
+	tmpl    string
 	replace bool
 }
 
@@ -135,18 +143,13 @@ func New(c *Config) (*Plugin, error) {
 
 func (p *Plugin) handleRequest(req api.Request, res api.Response) (next bool, reqCtx uint32) {
 	for _, m := range p.manipulations {
-		match, subexp := m.matcher(req)
-		handler.Host.Log(api.LogLevelDebug, fmt.Sprintf("Match: %v, subexp: %v", match, subexp))
+		match := m.matcher.match(req)
 		if !match {
 			continue
 		}
 
 		for _, h := range m.customRequestHeaders {
-			result, err := executeTmpl(h.tmpl, subexp)
-			if err != nil {
-				handler.Host.Log(api.LogLevelError, fmt.Sprintf("Could not execute template: %v", err))
-				return false, 0
-			}
+			result := m.matcher.replace(req, h.tmpl)
 			if h.replace {
 				req.Headers().Set(h.name, result)
 			} else {
@@ -154,11 +157,7 @@ func (p *Plugin) handleRequest(req api.Request, res api.Response) (next bool, re
 			}
 		}
 		for _, h := range m.customResponseHeaders {
-			result, err := executeTmpl(h.tmpl, subexp)
-			if err != nil {
-				handler.Host.Log(api.LogLevelError, fmt.Sprintf("Could not execute template: %v", err))
-				return false, 0
-			}
+			result := m.matcher.replace(req, h.tmpl)
 			if h.replace {
 				res.Headers().Set(h.name, result)
 			} else {
