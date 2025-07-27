@@ -31,8 +31,16 @@ services:
       - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
       - "traefik.http.routers.whoami.entrypoints=web"
       - "traefik.http.routers.whoami.middlewares=headers"
+      # Path-based matching configuration
       - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].matchPath=^/test/([^/]+)/([^/]+)$"
       - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customRequestHeaders[0].name=X-Request-Test"
       - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customRequestHeaders[0].value=first=$1,second=$2"
       - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customResponseHeaders[0].name=X-Response-Test"
       - "traefik.http.middlewares.headers.plugin.headers.manipulations[0].customResponseHeaders[0].value=second=$2"
+      # Header-based matching configuration
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].matchRequestHeader.name=X-My-Header"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].matchRequestHeader.value=^test-([^-]+)-([^-]+)$"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].customRequestHeaders[0].name=X-Header-Match"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].customRequestHeaders[0].value=matched-$1-$2"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].customResponseHeaders[0].name=X-Header-Response"
+      - "traefik.http.middlewares.headers.plugin.headers.manipulations[1].customResponseHeaders[0].value=from-header-$2"

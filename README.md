@@ -4,7 +4,7 @@ A Traefik middleware plugin that manipulates HTTP request and response headers u
 
 ## Features
 
-- Path-based header manipulation using regex matching
+- Path-based or header-based manipulation using regex matching
 - Dynamic header value generation with capture group substitution
 - Support for both request and response headers
 - WASM-based implementation for security and portability
@@ -52,7 +52,10 @@ http:
 ## Options
 
 - `manipulations`: Array of manipulation rules
-    - `matchPath`: Regex pattern to match against the request path
+    - `matchPath`: Regex pattern to match against the request path (mutually exclusive with `matchRequestHeader`)
+    - `matchRequestHeader`: Match against a request header value (mutually exclusive with `matchPath`)
+        - `name`: Header name to match against
+        - `value`: Regex pattern to match the header value
     - `customRequestHeaders`: Array of headers to add/modify on requests
         - `name`: Header name
         - `value`: Header value (supports capture group substitution with $1, $2, etc.)
@@ -76,6 +79,7 @@ http:
       plugin:
         headers:
           manipulations:
+            # Path-based matching
             - matchPath: "^/test/([^/]+)/([^/]+)$"
               customRequestHeaders:
                 - name: "X-Request-Test"
@@ -84,6 +88,19 @@ http:
               customResponseHeaders:
                 - name: "X-Response-Test"
                   value: "second=$2"
+                  replace: true
+            
+            # Header-based matching
+            - matchRequestHeader:
+                name: "X-My-Header"
+                value: "test-([^-]+)-([^-]+)"
+              customRequestHeaders:
+                - name: "X-Header-Match"
+                  value: "matched-$1-$2"
+                  replace: true
+              customResponseHeaders:
+                - name: "X-Header-Response"
+                  value: "from-header-$2"
                   replace: true
 
   services:

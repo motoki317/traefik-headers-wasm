@@ -15,3 +15,15 @@ testData:
         - name: X-Response-Test
           value: "second=$2"
           replace: true
+
+    - matchRequestHeader:
+        name: X-My-Header
+        value: "^test-([^-]+)-([^-])+$"
+      customRequestHeaders:
+        - name: X-Request-Test
+          value: "first=$1,second=$2,values="
+          replace: true
+      customResponseHeaders:
+        - name: X-Response-Test
+          value: "second=$2"
+          replace: true

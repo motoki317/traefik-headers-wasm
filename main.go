@@ -35,10 +35,16 @@ type Config struct {
 }
 
 type manipulationConfig struct {
-	MatchPath string `json:"matchPath"`
+	MatchPath          string             `json:"matchPath"`
+	MatchRequestHeader *matchHeaderConfig `json:"matchRequestHeader"`
 
 	CustomRequestHeaders  []customHeader `json:"customRequestHeaders"`
 	CustomResponseHeaders []customHeader `json:"customResponseHeaders"`
+}
+
+type matchHeaderConfig struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 func (m *manipulationConfig) compile() (*manipulation, error) {
@@ -66,11 +72,34 @@ func (m *manipulationConfig) compile() (*manipulation, error) {
 }
 
 func (m *manipulationConfig) getMatcher() (matcher, error) {
-	re, err := regexp.Compile(m.MatchPath)
+	// Check that only one of MatchPath or MatchRequestHeader is set
+	if m.MatchPath != "" && m.MatchRequestHeader != nil {
+		return nil, fmt.Errorf("matchPath and matchRequestHeader are mutually exclusive")
+	}
+	if m.MatchPath == "" && m.MatchRequestHeader == nil {
+		return nil, fmt.Errorf("either matchPath or matchRequestHeader must be set")
+	}
+
+	if m.MatchPath != "" {
+		re, err := regexp.Compile(m.MatchPath)
+		if err != nil {
+			return nil, err
+		}
+		return &fromPathMatcher{re: re}, nil
+	}
+
+	// Handle header matching
+	if m.MatchRequestHeader.Name == "" {
+		return nil, fmt.Errorf("matchRequestHeader.name is required")
+	}
+	if m.MatchRequestHeader.Value == "" {
+		return nil, fmt.Errorf("matchRequestHeader.value is required")
+	}
+	re, err := regexp.Compile(m.MatchRequestHeader.Value)
 	if err != nil {
 		return nil, err
 	}
-	return &fromPathMatcher{re: re}, nil
+	return &fromHeaderMatcher{headerName: m.MatchRequestHeader.Name, re: re}, nil
 }
 
 type fromPathMatcher struct {
@@ -83,6 +112,27 @@ func (f *fromPathMatcher) match(req api.Request) bool {
 
 func (f *fromPathMatcher) replace(req api.Request, tmpl string) string {
 	return f.re.ReplaceAllString(req.GetURI(), tmpl)
+}
+
+type fromHeaderMatcher struct {
+	headerName string
+	re         *regexp.Regexp
+}
+
+func (f *fromHeaderMatcher) match(req api.Request) bool {
+	headerValue, ok := req.Headers().Get(f.headerName)
+	if !ok {
+		return false
+	}
+	return f.re.MatchString(headerValue)
+}
+
+func (f *fromHeaderMatcher) replace(req api.Request, tmpl string) string {
+	headerValue, ok := req.Headers().Get(f.headerName)
+	if !ok {
+		return ""
+	}
+	return f.re.ReplaceAllString(headerValue, tmpl)
 }
 
 type customHeader struct {
