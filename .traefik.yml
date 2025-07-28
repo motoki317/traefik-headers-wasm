@@ -9,7 +9,7 @@ testData:
     - matchPath: "^/test/([^/]+)/([^/]+)$"
       customRequestHeaders:
         - name: X-Request-Test
-          value: "first=$1,second=$2,values="
+          value: "first=$1,second=$2"
           # replace: true
       customResponseHeaders:
         - name: X-Response-Test
@@ -21,7 +21,7 @@ testData:
         value: "^test-([^-]+)-([^-])+$"
       customRequestHeaders:
         - name: X-Request-Test
-          value: "first=$1,second=$2,values="
+          value: "first=$1,second=$2"
       customResponseHeaders:
         - name: X-Response-Test
           value: "second=$2"

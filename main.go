@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	handler.Host.EnableFeatures(api.FeatureBufferRequest)
+	// No buffer request is required if we are just reading request URI and headers (and not body)
+	// handler.Host.EnableFeatures(api.FeatureBufferRequest)
 
 	var config Config
 	err := json.Unmarshal(handler.Host.GetConfig(), &config)
