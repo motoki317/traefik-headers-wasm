@@ -137,9 +137,11 @@ func (f *fromHeaderMatcher) replace(req api.Request, tmpl string) string {
 }
 
 type customHeader struct {
-	Name    string `json:"name"`
-	Value   string `json:"value"`
-	Replace bool   `json:"replace"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
+	// NOTE: due to a bug in traefik's YAML parser, it reads all YAML values as string and encodes it into JSON.
+	// https://github.com/traefik/paerser/issues/64
+	Replace string `json:"replace"`
 }
 
 func (h *customHeader) compile() (*headerManipulation, error) {
@@ -149,7 +151,7 @@ func (h *customHeader) compile() (*headerManipulation, error) {
 	return &headerManipulation{
 		name:    h.Name,
 		tmpl:    h.Value,
-		replace: h.Replace,
+		replace: h.Replace == "true",
 	}, nil
 }
 
